@@ -1,58 +1,111 @@
 package com.orrish.automation.entrypoint;
 
-import javax.imageio.ImageIO;
-import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Paths;
 
 public class CompareResult {
 
-    int[][] matrix = null;
-    Color color = Color.RED;
-    File file = new File("diff.png");
-    int diffPixelCount = 0;
-    int totalPixelCount = 0;
+    private final int[][] matrix;
+    private int diffPixelCount = 0;
+    private int totalPixelCount = 0;
+    private String baselineImagePath;
+    private String actualImagePath;
+    private String diffImagePath;
+    private int diffThresholdAllowed = -1;
+    private int maxDiffPixelsAllowed = -1;
+    private boolean isSameStrict;
+    private final int imageHeight;
+    private final int imageWidth;
 
-    public CompareResult(int[][] matrix) {
+    public CompareResult(int[][] matrix, int imageWidth, int imageHeight) {
         this.matrix = matrix;
+        this.imageWidth = imageWidth;
+        this.imageHeight = imageHeight;
     }
 
-    public CompareResult setDiffColor(Color color) {
-        this.color = color;
+    int[][] getMatrix() {
+        return this.matrix;
+    }
+
+    CompareResult setActualImagePath(String actualImagePath) {
+        this.actualImagePath = actualImagePath;
         return this;
     }
 
-    public CompareResult setDiffFile(String fileName) {
-        this.file = new File(fileName);
+    public String getActualImagePath() {
+        return actualImagePath;
+    }
+
+    CompareResult setBaselineImagePath(String baselineImagePath) {
+        this.baselineImagePath = baselineImagePath;
         return this;
     }
 
-    public void populatePixelCounts() {
-        for (int row = 0; row < matrix.length; row++) {
-            for (int column = 0; column < matrix[0].length; column++) {
-                totalPixelCount++;
-                if (matrix[row][column] == 1) {
-                    diffPixelCount++;
-                }
-            }
-        }
+    public String getBaselineImagePath() {
+        return baselineImagePath;
     }
 
-    public boolean isSame() {
+    CompareResult setDiffImagePath(String diffImagePath) {
+        this.diffImagePath = diffImagePath;
+        return this;
+    }
+
+    public String getDiffImagePath() {
+        return diffImagePath;
+    }
+
+    public String getBaselineImageName() {
+        return Paths.get(this.baselineImagePath).getFileName().toString();
+    }
+
+    public String getActualImageName() {
+        return Paths.get(this.actualImagePath).getFileName().toString();
+    }
+
+    public String getDiffImageName() {
+        return Paths.get(this.diffImagePath).getFileName().toString();
+    }
+
+    CompareResult setDiffThresholdAllowed(int diffThresholdAllowed) {
+        this.diffThresholdAllowed = diffThresholdAllowed;
+        return this;
+    }
+
+    CompareResult setMaxDiffPixelsAllowed(int maxDiffPixelsAllowed) {
+        this.maxDiffPixelsAllowed = maxDiffPixelsAllowed;
+        return this;
+    }
+
+    public boolean isSameWithIgnoreArea() {
         if (totalPixelCount == 0) populatePixelCounts();
         return diffPixelCount == 0;
+    }
+
+    public boolean isSameStrict() {
+        return this.isSameStrict;
+    }
+
+    CompareResult setSameStrict(boolean sameStrict) {
+        isSameStrict = sameStrict;
+        return this;
+    }
+
+    public boolean isSameWithAllowance() {
+        float actualDiffPercent = getDiffPixelPercentage().floatValue() * 100;
+        boolean isWithinThresholdAllowed = actualDiffPercent <= diffThresholdAllowed;
+        if (maxDiffPixelsAllowed > -1 && diffThresholdAllowed > -1) {
+            return diffPixelCount < maxDiffPixelsAllowed && isWithinThresholdAllowed;
+        } else if (maxDiffPixelsAllowed > -1) {
+            return diffPixelCount < maxDiffPixelsAllowed;
+        } else if (diffThresholdAllowed > -1) {
+            return isWithinThresholdAllowed;
+        }
+        return isSameWithIgnoreArea();
     }
 
     public int getDiffPixelCount() {
         if (totalPixelCount == 0) populatePixelCounts();
         return diffPixelCount;
-    }
-
-    public int getTotalPixelCount() {
-        if (totalPixelCount == 0) populatePixelCounts();
-        return totalPixelCount;
     }
 
     public BigDecimal getDiffPixelPercentage() {
@@ -63,22 +116,28 @@ public class CompareResult {
         return bigDecimal;
     }
 
-    public void saveDiffImage() throws IOException {
-        BufferedImage diffImage = new BufferedImage(matrix[0].length, matrix.length, BufferedImage.TYPE_INT_RGB);
-        for (int row = 0; row < matrix.length; row++) {
+    public int getTotalPixelCount() {
+        if (totalPixelCount == 0) populatePixelCounts();
+        return totalPixelCount;
+    }
+
+    public int getImageHeight() {
+        return imageHeight;
+    }
+
+    public int getImageWidth() {
+        return imageWidth;
+    }
+
+    private void populatePixelCounts() {
+        for (int[] ints : matrix) {
             for (int column = 0; column < matrix[0].length; column++) {
-                if (matrix[row][column] == 1) {
-                    //Difference
-                    diffImage.setRGB(column, row, color.getRGB());
-                } else if (matrix[row][column] == -1) {
-                    //Ignore area
-                    diffImage.setRGB(column, row, Color.LIGHT_GRAY.getRGB());
-                } else {
-                    //Same
-                    diffImage.setRGB(column, row, Color.WHITE.getRGB());
+                totalPixelCount++;
+                if (ints[column] == 1) {
+                    diffPixelCount++;
                 }
             }
         }
-        ImageIO.write(diffImage, "png", file);
     }
+
 }
