@@ -20,25 +20,32 @@ Include it as dependency like this
 <dependency>
     <groupId>com.github.orrish-automation</groupId>
     <artifactId>image-compare</artifactId>
-    <version>0.0.1</version>
+    <version>0.0.2</version>
 </dependency>
 ```
 ###### Usage example
 ```java
-CompareResult compareResult = new ImageCompare()
-    .setBaseline(ImageIO.read(new File("expected.png")))
-    .setActual(ImageIO.read(new File("actual.png")))
-    .setIgnoreRegion(0, 0, 1047, 100)
-    .compareImage();
+        // Simplest way
+        CompareResult compareResultSimple = new CompareImage()
+        .setBaselineFile("expected.png")
+        .setActualFile("actual.png")
+        .setSaveDiffFile(false)
+        .compare();
 
-compareResult.isSame();
-compareResult.getDiffPixelCount();
-compareResult.getDiffPixelPercentage();
+        // Detailed way
+        CompareResult compareResultDetailed = new CompareImage()
+        .setBaselineFile("expected.png")
+        .setActualFile("actual.png")
+        .setDiffFile("diff.png")
+        .setSaveDiffFile(true)
+        .setDiffColor(Color.RED)
+        .setIgnoreRegion(0, 0, 1000, 500)
+        .setMaxDiffPixels(90)
+        .setDiffThreshold(2)
+        .compare();
 
-compareResult.setDiffColor(Color.RED)
-    .setDiffFile("diff.png")
-    .saveDiffImage();
-
+        compareResultDetailed.isSameWithIgnoreArea();
+        // Similarly, use other results from CompareResult
 
 ```
 
